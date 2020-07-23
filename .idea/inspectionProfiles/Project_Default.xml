@@ -1,0 +1,32 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="DuplicatedCode" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <Languages>
+        <language minSize="49" name="Python" />
+      </Languages>
+    </inspection_tool>
+    <inspection_tool class="DuplicatedInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="HtmlUnknownAttribute" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="myValues">
+        <value>
+          <list size="1">
+            <item index="0" class="java.lang.String" itemvalue="static" />
+          </list>
+        </value>
+      </option>
+      <option name="myCustomValuesEnabled" value="true" />
+    </inspection_tool>
+    <inspection_tool class="InstalledPackageInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="worldofclick.gamebonuses.models.GameBonuses.*" />
+          <option value="worldofclick.member.models.UserProfile.*" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="ReferenceExistsInspection" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="UnusedInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+  </profile>
+</component>
