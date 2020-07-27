@@ -55,10 +55,8 @@ ROOT_URLCONF = 'staff_studing_bot.urls'
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.jinja2.Jinja2'
-        ,
-        'DIRS': [os.path.join(BASE_DIR, 'templates')]
-        ,
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -156,4 +154,9 @@ if DEBUG:
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+WEBHOOK_HOST = ""
+
+
 

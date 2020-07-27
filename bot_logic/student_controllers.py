@@ -57,7 +57,7 @@ class StudentLogic:
         student_settings = StudentSettings.objects.filter(token=token).first()
 
         if not student_settings:
-            self.bot.send_message(self.message.chat.id, get_message_text('login_failed', msg['login_failed'], student_settings.student))
+            self.bot.send_message(self.message.chat.id, msg['login_failed'])
             return 0
 
         if student_settings.student.step != 0:
@@ -68,6 +68,7 @@ class StudentLogic:
             student_settings.student.step = 1
             student_settings.student.save()
             self.bot.send_message(self.message.chat.id, get_message_text('login_succeeded', msg['login_succeeded'], student_settings.student))
+            self.user = student_settings.student
             self.main_menu()
             return 1
 
@@ -77,7 +78,7 @@ class StudentLogic:
         :return: int (current student step)
         """
         if not self.user:
-            self.bot.send_message(self.message.chat.id, get_message_text('input_token', msg['key_enter']))
+            self.bot.send_message(self.message.chat.id, get_message_text('input_token', msg['key_enter'], bot_token=self.bot.token))
             return 0
         return self.main_menu()
 
@@ -92,7 +93,11 @@ class StudentLogic:
 
         text_message = get_message_text('main_menu', msg['main_menu'], self.user)
 
-        self.bot.send_message(self.message.chat.id, text_message, reply_markup=markup)
+        try:
+            self.bot.edit_message_text(chat_id=self.message.chat.id, text=text_message,
+                                       reply_markup=markup, message_id=self.message.message_id)
+        except apihelper.ApiException:
+            self.bot.send_message(self.message.chat.id, text_message, reply_markup=markup)
         return 1
 
     def studding(self) -> int:
@@ -116,8 +121,12 @@ class StudentLogic:
 
         text_message = get_message_text('studding', msg['studding'], self.user)
 
-        self.bot.edit_message_text(text=text_message, chat_id=self.message.chat.id,
-                                   reply_markup=markup, message_id=self.message.message_id)
+        try:
+            self.bot.edit_message_text(text=text_message, chat_id=self.message.chat.id,
+                                       reply_markup=markup, message_id=self.message.message_id)
+        except apihelper.ApiException:
+            self.bot.send_message(text=text_message, chat_id=self.message.chat.id,
+                                       reply_markup=markup)
         return 3
 
     def progress(self) -> int:
@@ -126,19 +135,19 @@ class StudentLogic:
         :return: 2
         """
         markup = types.InlineKeyboardMarkup(row_width=2)
-        markup.add(types.InlineKeyboardButton('Назад', callback_data='cancel'))
+        markup.add(types.InlineKeyboardButton('Назад', callback_data='main_menu'))
 
         topics = TheoryTopic.objects.filter(restaurant=self.user.staff.restaurant_branch).all()
         progress_text = ""
         for topic in topics:
             topic_text = f"{topic.name} {'Откр' if topic.blocked else 'Закр'}\n"
-            student_test = StudentTest.objects.filter(test=topic.test, student=self.user).fisrt()
-            topic_text += f'''\t
+            student_test = StudentTest.objects.filter(test=topic.test, student=self.user).first()
+            if student_test:
+                topic_text += f'''\t
 {f"Пройден: {student_test.points}/{student_test.max_points} {f'Открытых вопросов {student_test.opened_questions}/{student_test.max_opened_questions}' if student_test.max_opened_questions else ''}" if student_test else "Не пройден"}\n\n'''
             progress_text += topic_text
 
-        text_message = get_message_text('progress', msg['progress'], self.user)
-        text_message.format(progress_text)
+        text_message = get_message_text('progress', msg['progress'], self.user).format(progress_text)
 
         try:
             self.bot.edit_message_text(text=text_message, chat_id=self.message.chat.id,
@@ -171,17 +180,17 @@ class StudentLogic:
         tool_buttons = []
 
         if block_id != 0:
-            tool_buttons.append(types.InlineKeyboardButton('Назад', callback_data=f'topic_{topic_id}_{block_id + 1}').to_dic())
+            tool_buttons.append(types.InlineKeyboardButton('Назад', callback_data=f'topic_{topic_id}_{block_id - 1}').to_dic())
 
         tool_buttons.append(types.InlineKeyboardButton('К разделу', callback_data='studding').to_dic())
 
-        if block_id < len(blocks):
+        if block_id < len(blocks) - 1:
             tool_buttons.append(types.InlineKeyboardButton('Дальше', callback_data=f'topic_{topic_id}_{block_id + 1}').to_dic())
         else:
             if topic.test:
                 tool_buttons.append(types.InlineKeyboardButton('Пройти тест', callback_data=f'test_{topic.test.pk}_-1').to_dic())
             else:
-                tool_buttons.append(types.InlineKeyboardButton('Завершить раздел', callback_data=f'completetopick_{topic_id}').to_dic())
+                tool_buttons.append(types.InlineKeyboardButton('Завершить раздел', callback_data=f'completetopic_{topic_id}').to_dic())
 
         text_message = get_message_text('topic', msg['topic'], self.user).format(blocks[block_id].name,
                                                                                  blocks[block_id].text)
@@ -207,47 +216,64 @@ class StudentLogic:
         except TheoryTest.DoesNotExist:
             self.bot.send_message(text=msg.get('test_not_found'), chat_id=self.message.chat.id)
             return self.studding()
+
+        if question_id == test.questions.count():
+            return self.pass_test(test, student_test)
+
         markup = types.InlineKeyboardMarkup(row_width=2)
         # start test
         if question_id == -1:
-            markup.add(types.InlineKeyboardButton('Назад к теории', callback_data=f'topic_{test.theorytopic.pk}_{len(test.theorytopic.blocks.count()) - 1}'),
+            markup.add(types.InlineKeyboardButton('Назад к теории', callback_data=f'topic_{test.theorytopic.pk}_{test.theorytopic.blocks.count() - 1}'),
                        types.InlineKeyboardButton('Начать тест', callback_data=f'test_{test_id}_0'))
+            text_message = f'{test.name}'
+            try:
+                self.bot.edit_message_text(text=text_message, chat_id=self.message.chat.id,
+                                           message_id=self.message.message_id, reply_markup=markup)
+            except apihelper.ApiException:
+                self.bot.send_message(text=text_message, chat_id=self.message.chat.id,
+                                      reply_markup=markup)
+
+            return 5
         else:
-            if not test.questions.all()[question_id].is_opened:
+            all_questions = test.questions.all()
+            if not all_questions[question_id].is_opened:
                 # fill variants
                 student_answers_tmp = student_test.answers.all()
                 student_answers = []
                 for temp_answ in student_answers_tmp:
-                    student_answers.append(temp_answ.answer.pk)
-                for answer in test.questions.all()[question_id].answers.all():
+                    if temp_answ.answer:
+                        student_answers.append(temp_answ.answer.pk)
+                for answer in all_questions[question_id].answers.all():
                     # stick or square
-                    markup.add(types.InlineKeyboardButton(f'{"✔️" if answer.pk in student_answers else "🔳"} {answer.answer}',
+                    markup.add(types.InlineKeyboardButton(f'{"✔" if answer.pk in student_answers else "🔳"} {answer.answer}',
                                                           callback_data=f'answer_{student_test.pk}_{question_id}_{answer.pk}'))
 
         # last question
         if question_id == test.questions.count() - 1:
-            markup.add(types.InlineKeyboardButton('➡️', callback_data=f'test_{test_id}_{question_id - 1}'),
+            markup.add(types.InlineKeyboardButton('⬅', callback_data=f'test_{test_id}_{question_id - 1}'),
                        types.InlineKeyboardButton('Завершить тест', callback_data=f'test_{test_id}_{question_id+1}'))
-        elif question_id == test.questions.count():
-            return self.pass_test(test, student_test)
         # first question
         elif question_id == 0:
-            markup.add(types.InlineKeyboardButton('➡️', callback_data=f'test_{test_id}_{question_id + 1}'))
+            markup.add(types.InlineKeyboardButton('➡', callback_data=f'test_{test_id}_{question_id + 1}'))
+            self.user.current_test = student_test.pk
+            self.user.current_open_question = None
+            self.user.save()
         # another questions
         else:
-            markup.add(types.InlineKeyboardButton('⬅️', callback_data=f'test_{test_id}_{question_id - 1}'),
-                       types.InlineKeyboardButton('➡️', callback_data=f'test_{test_id}_{question_id + 1}'))
+            markup.add(types.InlineKeyboardButton('⬅', callback_data=f'test_{test_id}_{question_id - 1}'),
+                       types.InlineKeyboardButton('➡', callback_data=f'test_{test_id}_{question_id + 1}'))
 
-        if not test.questions.all()[question_id].is_opened:
-            text_message = f"Вопрос {question_id + 1}.\n\n{test.questions.all()[question_id].question}"
+        if not all_questions[question_id].is_opened:
+            text_message = f"Вопрос {question_id + 1}.\n\n{all_questions[question_id].question}"
         else:
-            text_message = f"Вопрос {question_id + 1}.\n\n{test.questions.all()[question_id].question}\n\n" \
-                           f"Это открытый вопрос, напишите на него ответ, он будет отправлен на проверку"
-            answer = student_test.answers.filter(question_id=question_id).first()
-            if answer:
-                text_message += f"Ваш текущий ответ:\n\n {answer.text}"
-            else:
-                answer = StudentAnswer(student=self.user, question_id=question_id)
+            text_message = f"Вопрос {question_id + 1}.\n\n{all_questions[question_id].question}\n\n" \
+                           f"Это открытый вопрос, напишите на него ответ, он будет отправлен на проверку\n"
+            answer = student_test.answers.filter(question=all_questions[question_id]).first()
+            print(answer)
+            print(all_questions[question_id])
+            text_message += f"Ваш текущий ответ:\n {answer.text if answer.text else 'Не отправлен'}"
+            if not answer:
+                answer = StudentAnswer(student=self.user, question=all_questions[question_id])
                 answer.save()
                 student_test.answers.add(answer)
                 self.user.current_open_question = answer.pk
@@ -286,6 +312,9 @@ class StudentLogic:
 
         student_answer = StudentAnswer(student=self.user, question=question, answer=answer)
         student_answer.save()
+        for answ in student_test.answers.all():
+            if answ.question == question:
+                answ.delete()
         student_test.answers.add(student_answer)
         student_test.save()
         return self.view_test(student_test.test.pk, question_id)
@@ -296,15 +325,16 @@ class StudentLogic:
         :return: view_test()
         """
         answer_text = self.message.text
+        student_test = StudentTest.objects.filter(pk=self.user.current_test).first()
 
         try:
-            test = TheoryTest.objects.get(pk=self.user.current_test).first()
+            test = TheoryTest.objects.get(pk=self.user.current_test)
         except TheoryTest.DoesNotExist:
             self.bot.send_message(text=msg.get('test_not_found'), chat_id=self.message.chat.id)
             return self.progress()
 
         try:
-            student_answer = StudentAnswer.objects.get(pk=self.user.current_open_question).first()
+            student_answer = StudentAnswer.objects.get(pk=self.user.current_open_question)
         except StudentAnswer.DoesNotExist:
             self.bot.send_message(text=msg.get('answer_not_found'), chat_id=self.message.chat.id)
             return self.view_test(test.pk, 0)
@@ -312,9 +342,16 @@ class StudentLogic:
         student_answer.text = answer_text
         student_answer.save()
         self.bot.send_message(text=msg.get('answer_writen'), chat_id=self.message.chat.id)
+        question_id = self.user.current_open_question
         self.user.current_open_question = None
         self.user.save()
-        return self.view_test(test.pk, student_answer.question.pk + 1)
+        i = 0
+        for question in student_test.test.questions.all():
+            if question.pk == question_id:
+                break
+            i += 1
+
+        return self.view_test(test.pk, i)
 
     def pass_test(self, test: TheoryTest, student_test: StudentTest) -> int:
         """
@@ -323,24 +360,29 @@ class StudentLogic:
         :param student_test:
         :return: progress()
         """
+        student_test.max_points = 0
+        student_test.points = 0
+        student_test.max_opened_questions = 0
+        student_test.opened_questions = 0
+
         for question in test.questions.all():
             if question.is_opened:
                 student_test.max_opened_questions += 1
+                continue
             else:
                 student_test.max_points += 1
             is_right = False
-            for student_answer in student_test.answers.all():
+            for student_answer in student_test.answers.filter(question__is_opened=False).all():
                 if is_right:
                     break
                 for answer in question.answers.all():
-                    if student_answer == answer and answer.is_right:
-                        if question.is_opened:
-                            student_test.opened_questions += 1
-                        else:
-                            student_test.points += 1
+                    if student_answer.answer.pk == answer.pk and answer.is_right:
+                        student_test.points += 1
                         is_right = True
                         break
-        student_test.if_finished = True
+        student_test.is_finished = True
+        student_test.test.theorytopic.finished = True
+        student_test.test.theorytopic.save()
         student_test.save()
         self.user.current_test = None
         self.user.save()

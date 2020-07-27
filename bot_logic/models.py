@@ -129,7 +129,7 @@ class TestQuestion(models.Model):
     """
     question = NonStrippingTextField()
     is_opened = models.BooleanField(default=False)
-    answers = models.ManyToManyField(TestAnswer)
+    answers = models.ManyToManyField(TestAnswer, blank=True)
 
 
 class TheoryTest(models.Model):
@@ -167,7 +167,7 @@ class StudentAnswer(models.Model):
     """
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE)
-    answer = models.ForeignKey(TestAnswer, on_delete=models.SET_NULL, null=True)
+    answer = models.ForeignKey(TestAnswer, on_delete=models.SET_NULL, null=True, blank=True)
     text = models.TextField(null=True, blank=True)
 
 
@@ -179,10 +179,10 @@ class StudentTest(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     answers = models.ManyToManyField(StudentAnswer)
     is_finished = models.BooleanField(default=False)
-    points = models.PositiveSmallIntegerField(default=None, null=True, blank=True)
-    max_points = models.PositiveSmallIntegerField(default=None, null=True, blank=True)
-    opened_questions = models.PositiveSmallIntegerField(default=None, null=True, blank=True)
-    max_opened_questions = models.PositiveSmallIntegerField(default=None, null=True, blank=True)
+    points = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
+    max_points = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
+    opened_questions = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
+    max_opened_questions = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
 
 
 

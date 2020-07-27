@@ -15,7 +15,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from .views import get_web_hook
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('', get_web_hook, name="telegram webhook"),
 ]

@@ -31,8 +31,7 @@ def send_welcome(message):
     telegram_bot = TelegramBot.objects.filter(token=bot.token).first()
     user = Student.objects.filter(telegram_bot=telegram_bot, user_id=message.chat.id).first()
     action = StudentLogic(bot, message, user)
-    user.step = action.welcome()
-    user.save()
+    action.welcome()
 
 
 @bot.message_handler(content_types=['text'])
@@ -41,7 +40,10 @@ def text_logic(message: types.Message):
     user = Student.objects.filter(telegram_bot=telegram_bot, user_id=message.chat.id).first()
     action = StudentLogic(bot, message, user)
     if not user or user.step == 0:
-        user.step = action.check_token()
+        if not user:
+            action.check_token()
+        else:
+            user.step = action.check_token()
 
     elif user.step == 5 and user.current_open_question:
         user.step = action.add_open_answer()
