@@ -80,7 +80,7 @@ class Student(models.Model):
     """
     Simple worker in restaurant, work with Telegram
     """
-    user_id = models.IntegerField(default=None, null=True)
+    user_id = models.IntegerField(default=None, null=True, blank=True)
     staff = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
     telegram_bot = models.ForeignKey(TelegramBot, on_delete=models.CASCADE)
     step = models.IntegerField(default=0)
@@ -93,13 +93,18 @@ class StudentSettings(models.Model):
     Student settings for change business logic
     """
     student = models.OneToOneField(Student, on_delete=models.CASCADE)
-    token = models.CharField(max_length=16, default=None)
+    token = models.CharField(max_length=16, default=None, null=True)
     language = models.CharField(max_length=4, default='ru')
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        if not self.token:
+            self.create_token()
+        super(StudentSettings, self).save()
 
     def create_token(self):
         letters = string.ascii_lowercase
         self.token = ''.join(random.choice(letters) for i in range(32))
-        self.save()
 
 
 class StudentInfo(models.Model):
