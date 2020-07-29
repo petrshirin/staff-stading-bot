@@ -85,13 +85,13 @@ class StudentAnswersView(APIView):
     info about student answers and check opened answers
     """
 
-    def get(self, request, pk=None) -> Response:
+    def get(self, request: Request) -> Response:
         """
         Get one instance of pk != None or all instances of StudentsAnswers and opened
-        :param request: student pk
-        :param pk:
+        :param request:
         :return:
         """
+        pk = request.query_params.get("user")
         if pk:
             student = validate_student_to_pk(pk)
             if student:
@@ -107,13 +107,13 @@ class StudentAnswersView(APIView):
             else:
                 return Response({"error": "invalid query param `restaurant_branch`", 'success': False}, status=200)
 
-    def put(self, request: Request, pk: int) -> Response:
+    def put(self, request: Request) -> Response:
         """
         Change Status in student topic
-        :param pk:
         :param request:
         :return:
         """
+        pk = request.query_params.get('topic')
         data = change_answer_status(request, pk)
         if data.get('success'):
             return Response(data, status=200)
