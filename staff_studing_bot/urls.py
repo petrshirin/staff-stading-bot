@@ -21,5 +21,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('rest_auth.urls'), name='user_auth'),
     path('telegram_bot/', include('bot_logic.urls')),
-    path('staff/', include('staffapi.urls'))
+    path('staff/', include('staffapi.urls')),
+    path('swagger/', include('swagger_schema.urls'))
 ]
