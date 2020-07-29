@@ -107,14 +107,19 @@ class StudentLogic:
         """
         markup = types.InlineKeyboardMarkup(row_width=2)
         topics = TheoryTopic.objects.filter(restaurant=self.user.staff.restaurant_branch).all()
+        last_topic = None
         for topic in topics:
-
-            if topic.finished:
+            student_topic = StudentTheoryTopic.objects.filter(student=self.user, theory_topic=topic).first()
+            if student_topic.blocked and last_topic and last_topic.finished:
+                student_topic.blocked = True
+                student_topic.save()
+            if student_topic.finished:
                 emoj = '✅'
-            elif not topic.blocked:
+            elif not student_topic.blocked:
                 emoj = '🔓'
             else:
                 emoj = '🔒'
+            last_topic = student_topic
             markup.add(types.InlineKeyboardButton(f'{emoj} {topic.name}', callback_data=f'topic_{topic.pk}_0'))
 
         markup.add(types.InlineKeyboardButton('Назад', callback_data='main_menu'))
@@ -126,7 +131,7 @@ class StudentLogic:
                                        reply_markup=markup, message_id=self.message.message_id)
         except apihelper.ApiException:
             self.bot.send_message(text=text_message, chat_id=self.message.chat.id,
-                                       reply_markup=markup)
+                                  reply_markup=markup)
         return 3
 
     def progress(self) -> int:
@@ -140,7 +145,8 @@ class StudentLogic:
         topics = TheoryTopic.objects.filter(restaurant=self.user.staff.restaurant_branch).all()
         progress_text = ""
         for topic in topics:
-            topic_text = f"{topic.name} {'Откр' if topic.blocked else 'Закр'}\n"
+            student_topic = StudentTheoryTopic.objects.filter(student=self.user, theory_topic=topic).first()
+            topic_text = f"{topic.name} {'Откр' if student_topic.blocked else 'Закр'}\n"
             student_test = StudentTest.objects.filter(test=topic.test, student=self.user).first()
             if student_test:
                 topic_text += f'''\t
@@ -171,7 +177,12 @@ class StudentLogic:
             self.bot.send_message(text=msg.get('topic_not_found'), chat_id=self.message.chat.id)
             return self.studding()
 
-        if topic.blocked:
+        student_topic = StudentTheoryTopic.objects.filter(student=self.user, theory_topic=topic).first()
+        if not student_topic:
+            self.bot.send_message(text=msg.get('topic_not_found'), chat_id=self.message.chat.id)
+            return self.studding()
+
+        if student_topic.blocked:
             self.bot.send_message(text=msg.get('test_before_next_lesson'), chat_id=self.message.chat.id)
             return self.studding()
 
@@ -180,17 +191,19 @@ class StudentLogic:
         tool_buttons = []
 
         if block_id != 0:
-            tool_buttons.append(types.InlineKeyboardButton('Назад', callback_data=f'topic_{topic_id}_{block_id - 1}').to_dic())
+            tool_buttons.append(types.InlineKeyboardButton('Назад', callback_data=f'topic_{topic_id}_{block_id - 1}').to_dict())
 
-        tool_buttons.append(types.InlineKeyboardButton('К разделу', callback_data='studding').to_dic())
+        tool_buttons.append(types.InlineKeyboardButton('К разделу', callback_data='studding').to_dict())
 
         if block_id < len(blocks) - 1:
-            tool_buttons.append(types.InlineKeyboardButton('Дальше', callback_data=f'topic_{topic_id}_{block_id + 1}').to_dic())
+            tool_buttons.append(types.InlineKeyboardButton('Дальше', callback_data=f'topic_{topic_id}_{block_id + 1}').to_dict())
         else:
+            student_topic.complete_theory = True
+            student_topic.save()
             if topic.test:
-                tool_buttons.append(types.InlineKeyboardButton('Пройти тест', callback_data=f'test_{topic.test.pk}_-1').to_dic())
+                tool_buttons.append(types.InlineKeyboardButton('Пройти тест', callback_data=f'test_{topic.test.pk}_-1').to_dict())
             else:
-                tool_buttons.append(types.InlineKeyboardButton('Завершить раздел', callback_data=f'completetopic_{topic_id}').to_dic())
+                tool_buttons.append(types.InlineKeyboardButton('Завершить раздел', callback_data=f'completetopic_{topic_id}').to_dict())
 
         text_message = get_message_text('topic', msg['topic'], self.user).format(blocks[block_id].name,
                                                                                  blocks[block_id].text)
@@ -381,8 +394,15 @@ class StudentLogic:
                         is_right = True
                         break
         student_test.is_finished = True
-        student_test.test.theorytopic.finished = True
-        student_test.test.theorytopic.save()
+        student_theory_topic = StudentTheoryTopic.objects.filter(student=self.user, theory_topic=test.theorytopic).first()
+        if student_theory_topic:
+            if student_test.points / student_test.max_points > 0.5:
+                student_theory_topic.complete_test = True
+            else:
+                student_theory_topic.complete_test = False
+            student_theory_topic.finished = True
+            student_theory_topic.save()
+
         student_test.save()
         self.user.current_test = None
         self.user.save()
