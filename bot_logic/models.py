@@ -1,6 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.timezone import now
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import string
+import random
 
 
 # Create your models here.
@@ -45,13 +49,17 @@ class Restaurant(models.Model):
         return f"{self.pk}. {self.name} {self.bot.name}"
 
 
+class City(models.Model):
+    name = models.CharField(max_length=255, default="Иркутск")
+
+
 class RestaurantBranch(models.Model):
     """
     Branch of Restaurant chain
     """
     main_restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
-    city = models.CharField(max_length=255)
+    city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True)
     address = models.CharField(max_length=500)
 
 
@@ -85,8 +93,13 @@ class StudentSettings(models.Model):
     Student settings for change business logic
     """
     student = models.OneToOneField(Student, on_delete=models.CASCADE)
-    token = models.CharField(max_length=16)
-    language = models.CharField(max_length=4)
+    token = models.CharField(max_length=16, default=None)
+    language = models.CharField(max_length=4, default='ru')
+
+    def create_token(self):
+        letters = string.ascii_lowercase
+        self.token = ''.join(random.choice(letters) for i in range(32))
+        self.save()
 
 
 class StudentInfo(models.Model):
@@ -94,14 +107,14 @@ class StudentInfo(models.Model):
     Student Info for staff interface
     """
     student = models.OneToOneField(Student, on_delete=models.CASCADE)
-    position = models.CharField(max_length=255)
-    first_name = models.CharField(max_length=255)
-    second_name = models.CharField(max_length=255)
-    third_name = models.CharField(max_length=255)
+    position = models.CharField(max_length=255, default=None, null=True)
+    first_name = models.CharField(max_length=255, default=None, null=True)
+    second_name = models.CharField(max_length=255, default=None, null=True)
+    third_name = models.CharField(max_length=255, default=None, null=True)
     date_start = models.DateField(default=now)
     date_birth = models.DateField(default=None, null=True, blank=True)
     phone = models.CharField(max_length=20, default=None, blank=True, null=True)
-    email = models.EmailField()
+    email = models.EmailField(default=None, null=True)
     profile_photo = models.ImageField(upload_to=create_user_file_path, null=True, blank=True, default=None)
 
 
@@ -157,6 +170,14 @@ class TheoryTopic(models.Model):
     text = NonStrippingTextField()
     test = models.OneToOneField(TheoryTest, on_delete=models.SET_NULL, null=True)
     blocks = models.ManyToManyField(TheoryBlock)
+
+
+class StudentTheoryTopic(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    theory_topic = models.ForeignKey(TheoryTopic, on_delete=models.CASCADE)
+    complete_theory = models.BooleanField(default=None, null=True)
+    complete_test = models.BooleanField(default=None, null=True)
+    complete_opened_questions = models.BooleanField(default=None, null=True)
     finished = models.BooleanField(default=False)
     blocked = models.BooleanField(default=True)
 
@@ -173,21 +194,40 @@ class StudentAnswer(models.Model):
 
 class StudentTest(models.Model):
     """
-    oppened test for student
+    opened test for student
     """
     test = models.ForeignKey(TheoryTest, on_delete=models.CASCADE)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     answers = models.ManyToManyField(StudentAnswer)
     is_finished = models.BooleanField(default=False)
+    is_check_staff = models.BooleanField(default=False)
     points = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
     max_points = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
     opened_questions = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
     max_opened_questions = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
 
 
+@receiver(post_save, sender=TheoryTopic)
+def create_student_topic(sender, instance, created, **kwargs):
+    if created:
+        staffs = Staff.objects.filter(restaurant_branch=instance.restaurant).all()
+        for staff in staffs:
+            students = Student.objects.filter(staff=staff).all()
+            for student in students:
+                StudentTheoryTopic.objects.create(student=student, theory_topic=instance)
 
 
+@receiver(post_save, sender=Student)
+def create_student_additional_tables(sender: Student, instance: Student, created: bool, **kwargs):
+    if created:
+        StudentInfo.objects.create(student=instance)
+        student_settings = StudentSettings.objects.create(student=instance)
+        student_settings.create_token()
 
 
+@receiver(post_save, sender=Student)
+def save_student_additional_tables(sender: Student, instance: Student, **kwargs):
+    instance.studentinfo.save()
+    instance.studentsettings.save()
 
 
