@@ -228,6 +228,10 @@ def create_student_additional_tables(sender: Student, instance: Student, created
         StudentInfo.objects.create(student=instance)
         student_settings = StudentSettings.objects.create(student=instance)
         student_settings.create_token()
+        topics = TheoryTopic.objects.filter(restaurant__staff=instance.staff).all()
+        for topic in topics:
+            StudentTheoryTopic.objects.create(student=instance, theory_topic=topic)
+
 
 
 @receiver(post_save, sender=Student)
