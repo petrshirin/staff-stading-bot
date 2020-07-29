@@ -57,4 +57,4 @@ class AnswerPostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StudentTheoryTopic
-        fields = ('complete_opened_questions')
+        fields = ('complete_opened_questions',)
