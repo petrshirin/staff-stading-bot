@@ -2,8 +2,7 @@ from django.core.management.base import LabelCommand
 import telebot
 from django.apps import apps
 from django.conf import settings
-
-TelegramBot = apps.get_model('bot_telegram', 'TelegramBot')
+from bot_logic.models import TelegramBot
 
 
 class Command(LabelCommand):
