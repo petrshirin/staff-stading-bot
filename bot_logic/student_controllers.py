@@ -146,7 +146,7 @@ class StudentLogic:
         progress_text = ""
         for topic in topics:
             student_topic = StudentTheoryTopic.objects.filter(student=self.user, theory_topic=topic).first()
-            topic_text = f"{topic.name} {'Откр' if student_topic.blocked else 'Закр'}\n"
+            topic_text = f"{topic.name} {'Открыт' if not student_topic.blocked else 'Закрыт'}\n"
             student_test = StudentTest.objects.filter(test=topic.test, student=self.user).first()
             if student_test:
                 topic_text += f'''\t

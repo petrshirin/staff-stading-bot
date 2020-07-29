@@ -233,7 +233,6 @@ def create_student_additional_tables(sender: Student, instance: Student, created
             StudentTheoryTopic.objects.create(student=instance, theory_topic=topic)
 
 
-
 @receiver(post_save, sender=Student)
 def save_student_additional_tables(sender: Student, instance: Student, **kwargs):
     instance.studentinfo.save()
