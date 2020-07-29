@@ -107,7 +107,7 @@ class StudentAnswersView(APIView):
             else:
                 return Response({"error": "invalid query param `restaurant_branch`", 'success': False}, status=200)
 
-    def post(self, request: Request, pk: int) -> Response:
+    def put(self, request: Request, pk: int) -> Response:
         """
         Change Status in student topic
         :param pk:
