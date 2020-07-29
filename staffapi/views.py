@@ -88,7 +88,7 @@ class StudentAnswersView(APIView):
     def get(self, request, pk=None) -> Response:
         """
         Get one instance of pk != None or all instances of StudentsAnswers and opened
-        :param request:
+        :param request: student pk
         :param pk:
         :return:
         """
@@ -104,14 +104,17 @@ class StudentAnswersView(APIView):
             if rest_branch:
                 data = get_all_students_answers(rest_branch)
                 return Response({"data": data, 'success': True}, status=200)
+            else:
+                return Response({"error": "invalid query param `restaurant_branch`", 'success': False}, status=200)
 
-    def post(self, request: Request) -> Response:
+    def post(self, request: Request, pk: int) -> Response:
         """
         Change Status in student topic
+        :param pk:
         :param request:
         :return:
         """
-        data = change_answer_status(request)
+        data = change_answer_status(request, pk)
         if data.get('success'):
             return Response(data, status=200)
         else:

@@ -203,8 +203,14 @@ def get_current_student_answers(student: Student) -> Optional[Dict[str, Union[li
     return results
 
 
-def change_answer_status(request: Request):
-    post_ser = AnswerPostSerializer(data=request.data)
+def change_answer_status(request: Request, pk: int):
+    try:
+        answer = StudentTheoryTopic.objects.get(pk=pk)
+    except StudentTheoryTopic.DoesNotExist:
+        return {"success": False, "error": "Answer not found"}
+    post_ser = AnswerPostSerializer(answer, data={
+        "complete_opened_questions": request.data.get('complete_opened_questions')
+    })
     if post_ser.is_valid():
         post_ser.save()
         return {"success": True, "data": "ok"}
