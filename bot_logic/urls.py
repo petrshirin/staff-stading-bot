@@ -16,7 +16,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from .views import get_web_hook
+from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
-    path('<str:token>', get_web_hook, name="telegram webhook"),
+    path('<str:token>', csrf_exempt(get_web_hook), name="telegram webhook"),
 ]
