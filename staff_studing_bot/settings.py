@@ -33,7 +33,7 @@ if DEBUG.lower() == 'false':
 else:
     DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', ]
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost:3000']
 
 # Application definition
 
