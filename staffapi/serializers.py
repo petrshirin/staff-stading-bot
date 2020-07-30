@@ -13,7 +13,7 @@ class RestaurantBranchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RestaurantBranch
-        fields = ('name', 'city', 'address')
+        fields = ('id', 'name', 'city', 'address')
 
 
 class MinimalStudentSerializer(serializers.Serializer):
