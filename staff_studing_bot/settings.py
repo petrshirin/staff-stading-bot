@@ -194,8 +194,11 @@ USE_TZ = True
 
 # Cors conf
 
-CORS_ORIGIN_ALLOW_ALL = True
 CORS_REPLACE_HTTPS_REFERER = True
+
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+]
 
 CORS_ALLOW_METHODS = [
     'DELETE',
