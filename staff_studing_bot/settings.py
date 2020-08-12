@@ -198,6 +198,7 @@ CORS_REPLACE_HTTPS_REFERER = True
 
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
+    'http://staffront.mytesttelegrambotdev.ru'
 ]
 
 CORS_ALLOW_METHODS = [
