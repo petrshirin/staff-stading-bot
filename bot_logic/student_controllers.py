@@ -215,7 +215,7 @@ class StudentLogic:
 
     def view_test(self, test_id: int, question_id: int) -> int:
         """
-        view test and test questions
+        view test or test questions
         :param test_id: test for get in bd
         :param question_id: number of question
         :return: 5
@@ -282,9 +282,10 @@ class StudentLogic:
             text_message = f"Вопрос {question_id + 1}.\n\n{all_questions[question_id].question}\n\n" \
                            f"Это открытый вопрос, напишите на него ответ, он будет отправлен на проверку\n"
             answer = student_test.answers.filter(question=all_questions[question_id]).first()
-            print(answer)
-            print(all_questions[question_id])
-            text_message += f"Ваш текущий ответ:\n {answer.text if answer.text else 'Не отправлен'}"
+            if answer:
+                text_message += f"Ваш текущий ответ: {answer.text if answer.text else 'Не отправлен'}"
+            else:
+                text_message += "Ваш текущий ответ: Не отправлен"
             if not answer:
                 answer = StudentAnswer(student=self.user, question=all_questions[question_id])
                 answer.save()
