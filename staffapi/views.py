@@ -8,7 +8,8 @@ from .services import \
     get_minimal_info_about_students, \
     get_full_student_info, get_current_student_answers, \
     validate_student_to_pk, get_all_students_answers, \
-    change_answer_status
+    change_answer_status, register_new_student, \
+    update_student_info, get_all_course
 from rest_framework.request import Request
 
 
@@ -79,6 +80,23 @@ class StudentView(APIView):
             data = get_full_student_info(request.user.staff, request.query_params.get('restaurant_branch'), many=True)
         return Response({"data": data, "success": True}, status=200)
 
+    def post(self, request: Request) -> Response:
+
+        response = register_new_student(request)
+
+        if response.get('errors'):
+            return Response(response, status=422)
+        else:
+            return Response(response, status=201)
+
+    def put(self, request: Request, pk: int) -> Response:
+        response = update_student_info(request, pk)
+
+        if response.get('errors'):
+            return Response(response, status=422)
+        else:
+            return Response(response, status=201)
+
 
 class StudentAnswersView(APIView):
     """
@@ -120,3 +138,12 @@ class StudentAnswersView(APIView):
         else:
             return Response(data, status=422)
 
+
+class TopicListView(APIView):
+    """
+    Api view for all topics in staff's restaurant
+    """
+
+    def get(self, request: Request) -> Response:
+        response = get_all_course(request)
+        return Response(response, status=200)

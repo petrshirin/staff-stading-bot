@@ -2,7 +2,9 @@ from rest_framework.views import Response
 from django.http import HttpRequest
 from .serializers import CitySerializer, RestaurantBranchSerializer, \
     StudentSerializer, MinimalStudentSerializer, \
-    AnswerSerializer, OpenedQuestionSerializer, AnswerPostSerializer
+    AnswerSerializer, OpenedQuestionSerializer, \
+    AnswerPostSerializer, StudentPostSerializer, \
+    TheoryTopicListSerializer
 from .models import *
 from rest_framework.utils.serializer_helpers import ReturnList, ReturnDict
 from typing import Optional, List, Dict, Any, Union
@@ -217,3 +219,94 @@ def change_answer_status(request: Request, pk: int):
     else:
         return {"success": False, "error": post_ser.errors}
 
+
+def register_new_student(request: Request) -> Dict:
+    data = request.data
+    course = request.data['course']
+    try:
+        topic = TheoryTopic.objects.get(pk=course)
+    except TheoryTopic.DoesNotExist:
+        return {"errors": "course does not exist", 'success': False}
+
+    if StudentInfo.objects.filter(first_name=data['first_name'], second_name=data['second_name'], third_name=data['third_name'], student__staff=request.user.staff):
+        return {"errors": "Student already exist", 'success': False}
+
+    student_ser = StudentPostSerializer(data=data)
+    if student_ser.is_valid():
+
+        student = Student.objects.create(staff=request.user.staff, telegram_bot=request.user.staff.restaurant_branch.main_restaurant.bot)
+        student_ser.update(student.studentinfo, student_ser.validated_data)
+
+        created = add_course_to_user(topic, student)
+
+        user_data = {"id": student.pk,
+                     "token": student.studentsettings.token,
+                     "position": student.studentinfo.position,
+                     "first_name": student.studentinfo.first_name,
+                     "second_name": student.studentinfo.second_name,
+                     "third_name": student.studentinfo.third_name,
+                     "date_work_start": student.studentinfo.date_start,
+                     "date_birth": student.studentinfo.date_birth,
+                     "education": student.studentinfo.education,
+                     "phone": student.studentinfo.phone,
+                     "email": student.studentinfo.email}
+
+        if not created:
+            user_data['course'] = None
+        else:
+            user_data['course'] = topic.pk
+
+        students_serializer_return = StudentSerializer(data=user_data)
+
+        if students_serializer_return.is_valid():
+            return {'data': students_serializer_return.validated_data, 'success': True}
+        print(students_serializer_return.errors)
+        return {'data': student_ser.validated_data, 'success': True, 'access_token': student.studentsettings.token}
+    else:
+        return {'errors': student_ser.errors, 'success': False}
+
+
+def update_student_info(request: Request, pk: int) -> Dict:
+    try:
+        student = Student.objects.get(pk=pk)
+    except Student.DoesNotExist:
+        return {'errors': 'user do not exists', 'success': True}
+
+    student_ser = StudentPostSerializer(student.studentinfo, data=request.data)
+    if student_ser.is_valid():
+        print(student_ser.validated_data)
+        student_ser.update(student.studentinfo, student_ser.validated_data)
+
+        students_serializer_return = StudentSerializer(data={"id": student.pk,
+                                                             "token": student.studentsettings.token,
+                                                             "position": student.studentinfo.position,
+                                                             "first_name": student.studentinfo.first_name,
+                                                             "second_name": student.studentinfo.second_name,
+                                                             "third_name": student.studentinfo.third_name,
+                                                             "date_work_start": student.studentinfo.date_start,
+                                                             "date_birth": student.studentinfo.date_birth,
+                                                             "education": student.studentinfo.education,
+                                                             "phone": student.studentinfo.phone,
+                                                             "email": student.studentinfo.email,
+                                                             })
+
+        if students_serializer_return.is_valid():
+            return {'data': students_serializer_return.validated_data, 'success': True}
+
+        return {'data': students_serializer_return.validated_data, 'success': True}
+    else:
+        return {'errors': student_ser.errors, 'success': False}
+
+
+def add_course_to_user(topic: TheoryTopic, student: Student) -> bool:
+    if StudentTheoryTopic.objects.filter(theory_topic=topic, student=student):
+        return False
+    student_topic = StudentTheoryTopic(theory_topic=topic, student=student, blocked=False)
+    student_topic.save()
+    return True
+
+
+def get_all_course(request: Request) -> Dict:
+    topics = TheoryTopic.objects.filter(restaurant=request.user.staff.restaurant_branch.main_restaurant).all()
+    topics_ser = TheoryTopicListSerializer(topics, many=True)
+    return {"data": topics_ser.data, 'success': True}

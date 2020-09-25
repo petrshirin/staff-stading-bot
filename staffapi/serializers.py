@@ -31,11 +31,13 @@ class StudentSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=255, allow_null=True)
     second_name = serializers.CharField(max_length=255, allow_null=True)
     third_name = serializers.CharField(max_length=255, allow_null=True)
+    education = serializers.CharField(max_length=255, allow_null=True)
     date_work_start = serializers.DateField(allow_null=True)
     date_birth = serializers.DateField(allow_null=True)
     phone = serializers.CharField(max_length=15, min_length=9, allow_null=True)
     email = serializers.EmailField(allow_null=True)
-    profile_photo = serializers.ImageField(allow_null=True)
+    profile_photo = serializers.ImageField(allow_null=True, default=None, required=False)
+    course = serializers.IntegerField(allow_null=True, required=False)
 
 
 class OpenedQuestionSerializer(serializers.Serializer):
@@ -58,3 +60,22 @@ class AnswerPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentTheoryTopic
         fields = ('complete_opened_questions',)
+
+
+class StudentPostSerializer(serializers.ModelSerializer):
+
+    date_start = serializers.DateField(input_formats=["%d.%m.%Y"], required=False)
+    date_birth = serializers.DateField(input_formats=['%d.%m.%Y'], required=False)
+
+    class Meta:
+        model = StudentInfo
+        fields = ('first_name', 'second_name', 'third_name', 'phone', 'position', 'date_start', 'education', 'email', 'date_birth')
+
+
+class TheoryTopicListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = TheoryTopic
+        fields = ('id', 'name', 'restaurant')
+
+

@@ -113,11 +113,12 @@ class StudentInfo(models.Model):
     """
     student = models.OneToOneField(Student, on_delete=models.CASCADE)
     position = models.CharField(max_length=255, default=None, null=True)
-    first_name = models.CharField(max_length=255, default=None, null=True)
-    second_name = models.CharField(max_length=255, default=None, null=True)
-    third_name = models.CharField(max_length=255, default=None, null=True)
+    first_name = models.CharField(max_length=255)
+    second_name = models.CharField(max_length=255)
+    third_name = models.CharField(max_length=255)
     date_start = models.DateField(default=now)
     date_birth = models.DateField(default=None, null=True, blank=True)
+    education = models.CharField(max_length=255, default='Среднее')
     phone = models.CharField(max_length=20, default=None, blank=True, null=True)
     email = models.EmailField(default=None, null=True)
     profile_photo = models.ImageField(upload_to=create_user_file_path, null=True, blank=True, default=None)
@@ -170,7 +171,8 @@ class TheoryTopic(models.Model):
     """
     Big block in particular theme
     """
-    restaurant = models.ForeignKey(RestaurantBranch, on_delete=models.CASCADE)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    creator = models.ForeignKey(Staff, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     text = NonStrippingTextField()
     test = models.OneToOneField(TheoryTest, on_delete=models.SET_NULL, null=True)
@@ -228,9 +230,10 @@ def create_student_additional_tables(sender: Student, instance: Student, created
         StudentInfo.objects.create(student=instance)
         student_settings = StudentSettings.objects.create(student=instance)
         student_settings.create_token()
-        topics = TheoryTopic.objects.filter(restaurant__staff=instance.staff).all()
-        for topic in topics:
-            StudentTheoryTopic.objects.create(student=instance, theory_topic=topic)
+        student_settings.save()
+        # topics = TheoryTopic.objects.filter(restaurant__staff=instance.staff).all()
+        # for topic in topics:
+        #    StudentTheoryTopic.objects.create(student=instance, theory_topic=topic)
 
 
 @receiver(post_save, sender=Student)
