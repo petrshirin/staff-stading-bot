@@ -106,7 +106,7 @@ class StudentLogic:
         :return: 3
         """
         markup = types.InlineKeyboardMarkup(row_width=2)
-        topics = TheoryTopic.objects.filter(restaurant=self.user.staff.restaurant_branch).all()
+        topics = TheoryTopic.objects.filter(restaurant=self.user.staff.restaurant_branch.main_restaurant).all()
         last_topic = None
         for topic in topics:
             student_topic = StudentTheoryTopic.objects.filter(student=self.user, theory_topic=topic).first()
