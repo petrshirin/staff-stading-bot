@@ -171,7 +171,7 @@ class TheoryTopic(models.Model):
     """
     Big block in particular theme
     """
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    restaurant = models.ForeignKey(RestaurantBranch, on_delete=models.CASCADE)
     creator = models.ForeignKey(Staff, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     text = NonStrippingTextField()

@@ -106,7 +106,7 @@ class StudentLogic:
         :return: 3
         """
         markup = types.InlineKeyboardMarkup(row_width=2)
-        topics = TheoryTopic.objects.filter(restaurant=self.user.staff.restaurant_branch.main_restaurant).all()
+        topics = TheoryTopic.objects.filter(restaurant=self.user.staff.restaurant_branch).all()
         last_topic = None
         for topic in topics:
             student_topic = StudentTheoryTopic.objects.filter(student=self.user, theory_topic=topic).first()
@@ -142,7 +142,7 @@ class StudentLogic:
         markup = types.InlineKeyboardMarkup(row_width=2)
         markup.add(types.InlineKeyboardButton('Назад', callback_data='main_menu'))
 
-        topics = TheoryTopic.objects.filter(restaurant=self.user.staff.restaurant_branch.main_restaurant).all()
+        topics = TheoryTopic.objects.filter(restaurant=self.user.staff.restaurant_branch).all()
         progress_text = ""
         for topic in topics:
             student_topic = StudentTheoryTopic.objects.filter(student=self.user, theory_topic=topic).first()
