@@ -405,6 +405,7 @@ class StudentLogic:
             student_theory_topic.save()
 
         student_test.save()
+        self.open_next_topic(student_test)
         self.user.current_test = None
         self.user.save()
         return self.progress()
@@ -416,6 +417,20 @@ class StudentLogic:
         """
         self.bot.send_message(self.message.chat.id, "Это действие запрещено во время теста")
         return 5
+
+    @staticmethod
+    def open_next_topic(current_test: StudentTest) -> None:
+        """
+        open new topic if test does not have opened questions
+        :param current_test:
+        :return:
+        """
+        answers = current_test.answers.filter(question__is_opened=True).all()
+        if not answers:
+            next_topic = StudentTheoryTopic.objects.filter(student=current_test.student, blocked=True).first()
+            next_topic.update(blocked=True)
+
+
 
 
 
